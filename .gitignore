@@ -15,3 +15,25 @@ project/plugins/project/
 # Scala-IDE specific
 .scala_dependencies
 .worksheet
+
+.idea
+!.idea/vcs.xml
+/classes
+/dist
+/out
+/SDK/*SDK
+/target
+/*.bat
+*.class
+out
+build
+.DS_Store
+*~
+target/
+project
+
+testdata/debugger
+
+#QuickFix
+fix-data
+fix-logs
