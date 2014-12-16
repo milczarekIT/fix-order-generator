@@ -20,7 +20,7 @@ object App {
       Thread.sleep(delay)
       val order = OrderGenerator.next
       val result = fixSession.send(order)
-      LOGGER.debug("Order send: " + result + " ClOrdID: " + order.getClOrdID.getValue + ", symbol: " + order.getSymbol.getValue + ", orderQty: " + order.getOrderQty.getValue)
+      LOGGER.debug("Order send: " + result + " ClOrdID: " + order.getClOrdID.getValue + ", symbol: " + order.getSymbol.getValue + ", orderQty: " + order.getOrderQty.getValue + ", ordType: " + order.getOrdType.getValue + ", account: " + order.getAccount.getValue)
     }
   }
 
