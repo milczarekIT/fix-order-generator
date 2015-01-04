@@ -10,4 +10,6 @@ object SymbolGenerator {
   private val symbols = List("EUR/USD", "AUD/USD", "GBP/USD", "USD/JPY", "EUR/JPY", "EUR/GBP", "USD/CAD", "USD/CHF")
 
   def randomSymbol = Random.shuffle(symbols.toList).head
+
+  def all = symbols
 }

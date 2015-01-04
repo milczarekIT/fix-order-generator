@@ -1,7 +1,8 @@
 package org.nexbook.tools.fixordergenerator
 
 import org.nexbook.tools.fixordergenerator.fix.FixApplication
-import org.nexbook.tools.fixordergenerator.generator.OrderGenerator
+import org.nexbook.tools.fixordergenerator.generator.{SymbolGenerator, OrderGenerator}
+import org.nexbook.tools.fixordergenerator.repository.{PriceRepository, PricesLoader}
 import org.slf4j.LoggerFactory
 import quickfix._
 
@@ -11,6 +12,10 @@ object App {
 
   def main(args: Array[String]) = {
     val delay = 2000;
+
+    val prices = new PricesLoader(SymbolGenerator.all).loadCurrentPrices
+    LOGGER.info("Loaded prices: {}", prices)
+    PriceRepository.updatePrices(prices)
 
     LOGGER.info("OrderGenerator started. Order generating with delay: {}", delay)
     val fixSession = initFixInitiator.getManagedSessions.iterator.next
@@ -38,7 +43,7 @@ object App {
   def waitForLogon(session: Session) = {
     while (!session.isLoggedOn) {
       LOGGER.debug("Waiting for logging to FIX Session")
-      Thread.sleep(100)
+      Thread.sleep(300)
     }
     LOGGER.info("Logged to fix session: {}", session.getSessionID)
   }

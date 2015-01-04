@@ -3,7 +3,8 @@ package org.nexbook.tools.fixordergenerator.generator
 
 import java.util.UUID
 
-import org.joda.time.{DateTimeZone, DateTime}
+import org.joda.time.{DateTime, DateTimeZone}
+import org.nexbook.tools.fixordergenerator.repository
 import org.nexbook.tools.fixordergenerator.repository.PriceRepository
 import org.nexbook.tools.fixordergenerator.utils.RandomUtils
 import quickfix.field._
@@ -17,7 +18,7 @@ import scala.util.Random
 object OrderGenerator {
 
   val availableSides: List[Side] = List(new Side(Side.BUY), new Side(Side.SELL))
-  val availableOrderTypes: List[OrdType] = List(new OrdType(OrdType.MARKET), new OrdType(OrdType.LIMIT))
+  val availableOrderTypes: List[(Int, OrdType)] = List((2 -> new OrdType(OrdType.MARKET)), (7 -> new OrdType(OrdType.LIMIT)))
 
   def next(count: Int): List[NewOrderSingle] = Seq.fill(count)(next).toList
 
@@ -36,15 +37,17 @@ object OrderGenerator {
 
   private def currentTransactTime = new TransactTime(DateTime.now(DateTimeZone.UTC).toDate)
 
-  private def ordType = Random.shuffle(availableOrderTypes).head
+  private def ordType = RandomUtils.weightedRandom(availableOrderTypes)
 
   private def orderQty = ((Random.nextInt(100) + 1) * 1000).toDouble
 
-  private def account =  new Account("%05d".format((Random.nextInt(500) + 1)))
+  private def account = new Account("%05d".format((Random.nextInt(500) + 1)))
+
+
 
   private def ordTypeDependent(order: NewOrderSingle) = order.getOrdType.getValue match {
     case OrdType.LIMIT => {
-      order.set(new Price(PriceRepository.priceForSymbol(order.getSymbol.getValue) * RandomUtils.random(0.96, 1.04)))
+      order.set(new Price(PriceRepository.priceForSymbol(order.getSymbol.getValue, order.getSide) * RandomUtils.random(0.96, 1.04)))
       order
     }
     case _ => order
