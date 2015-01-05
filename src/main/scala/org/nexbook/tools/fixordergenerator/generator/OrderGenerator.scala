@@ -4,7 +4,6 @@ package org.nexbook.tools.fixordergenerator.generator
 import java.util.UUID
 
 import org.joda.time.{DateTime, DateTimeZone}
-import org.nexbook.tools.fixordergenerator.repository
 import org.nexbook.tools.fixordergenerator.repository.PriceRepository
 import org.nexbook.tools.fixordergenerator.utils.RandomUtils
 import quickfix.field._
@@ -42,7 +41,6 @@ object OrderGenerator {
   private def orderQty = ((Random.nextInt(100) + 1) * 1000).toDouble
 
   private def account = new Account("%05d".format((Random.nextInt(500) + 1)))
-
 
 
   private def ordTypeDependent(order: NewOrderSingle) = order.getOrdType.getValue match {

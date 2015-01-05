@@ -16,15 +16,15 @@ class PricesLoader(symbols: List[String]) {
   val OANDA_API_URL = "http://api-sandbox.oanda.com/v1"
   val pricesUrl = OANDA_API_URL + "/prices?instruments=" + toOandaUrlEncodedSymbolsFormat
 
-  private def toOandaUrlEncodedSymbolsFormat: String = symbols.map(_.replace("/", "_")).toList.mkString("%2C")
-
   def loadCurrentPrices: Map[String, (Double, Double)] = {
     val strResponse = Http(url(pricesUrl) OK as.String).apply
     val prices = JsonParser.parse(strResponse) \\ "prices"
     toMap(prices.extract[List[OandaApiPriceDTO]])
   }
 
-  private def toMap(dtos: List[OandaApiPriceDTO]): Map[String, (Double, Double)] = dtos.map(dto => (dto.instrument.replace("_", "/") -> (dto.bid, dto.ask))).toMap
+  private def toMap(dtos: List[OandaApiPriceDTO]): Map[String, (Double, Double)] = dtos.map(dto => (dto.instrument.replace("_", "/") ->(dto.bid, dto.ask))).toMap
+
+  private def toOandaUrlEncodedSymbolsFormat: String = symbols.map(_.replace("/", "_")).toList.mkString("%2C")
 
   object DateParser {
     def parse(s: String, format: Formats) =

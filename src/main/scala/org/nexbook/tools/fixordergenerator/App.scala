@@ -1,7 +1,7 @@
 package org.nexbook.tools.fixordergenerator
 
 import org.nexbook.tools.fixordergenerator.fix.FixApplication
-import org.nexbook.tools.fixordergenerator.generator.{SymbolGenerator, OrderGenerator}
+import org.nexbook.tools.fixordergenerator.generator.{OrderGenerator, SymbolGenerator}
 import org.nexbook.tools.fixordergenerator.repository.{PriceRepository, PricesLoader}
 import org.slf4j.LoggerFactory
 import quickfix._
