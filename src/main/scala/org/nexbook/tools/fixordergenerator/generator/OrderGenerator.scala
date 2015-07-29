@@ -45,7 +45,10 @@ object OrderGenerator {
 
   private def ordTypeDependent(order: NewOrderSingle) = order.getOrdType.getValue match {
     case OrdType.LIMIT => {
-      order.set(new Price(PriceRepository.priceForSymbol(order.getSymbol.getValue, order.getSide) * RandomUtils.random(0.96, 1.04)))
+      val priceFromRepo = PriceRepository.priceForSymbol(order.getSymbol.getValue, order.getSide);
+      val randomizedPrice = priceFromRepo * RandomUtils.random(0.96, 1.04);
+      val roundedPrice = BigDecimal(randomizedPrice).setScale(5, BigDecimal.RoundingMode.HALF_UP).toDouble
+      order.set(new Price(roundedPrice))
       order
     }
     case _ => order
