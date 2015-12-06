@@ -1,5 +1,7 @@
 package org.nexbook.tools.fixordergenerator.generator
 
+import com.typesafe.config.ConfigFactory
+import scala.collection.JavaConverters._
 import scala.util.Random
 
 /**
@@ -7,9 +9,9 @@ import scala.util.Random
  */
 object SymbolGenerator {
 
-  private val symbols = List("EUR/USD", "AUD/USD", "GBP/USD", "USD/JPY", "EUR/JPY", "EUR/GBP", "USD/CAD", "USD/CHF")
+  private val symbols = ConfigFactory.load().getStringList("org.nexbook.symbols").asScala.toList //List("EUR/USD", "AUD/USD", "GBP/USD", "USD/JPY", "EUR/JPY", "EUR/GBP", "USD/CAD", "USD/CHF")
 
-  def randomSymbol = Random.shuffle(symbols.toList).head
+  def randomSymbol = Random.shuffle(symbols).head
 
   def all = symbols
 }

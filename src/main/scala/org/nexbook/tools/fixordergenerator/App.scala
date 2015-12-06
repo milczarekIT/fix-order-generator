@@ -3,31 +3,57 @@ package org.nexbook.tools.fixordergenerator
 import org.nexbook.tools.fixordergenerator.fix.FixApplication
 import org.nexbook.tools.fixordergenerator.generator.{OrderGenerator, SymbolGenerator}
 import org.nexbook.tools.fixordergenerator.repository.{PriceRepository, PricesLoader}
+import org.nexbook.tools.fixordergenerator.utils.RandomUtils
 import org.slf4j.LoggerFactory
 import quickfix._
+
+import scala.collection.JavaConverters._
 
 object App {
 
   val LOGGER = LoggerFactory.getLogger(classOf[App])
 
-  def main(args: Array[String]) = {
-    val delay = 2000;
+  val minDelay = 300
+  val maxDelay = 2000
+  val threadsPerFixSession = 5
 
+
+  def main(args: Array[String]) = {
     val prices = new PricesLoader(SymbolGenerator.all).loadCurrentPrices
     LOGGER.info("Loaded prices: {}", prices)
     PriceRepository.updatePrices(prices)
+    val fixInitiator = initFixInitiator
+    val fixSessions = fixInitiator.getManagedSessions.asScala
 
-    LOGGER.info("OrderGenerator started. Order generating with delay: {}", delay)
-    val fixSession = initFixInitiator.getManagedSessions.iterator.next
+    def loggedSessions = fixSessions.filter(_.isLoggedOn)
 
-    waitForLogon(fixSession)
-
-    while (true) {
-      Thread.sleep(delay)
-      val order = OrderGenerator.next
-      val result = fixSession.send(order)
-      LOGGER.debug("Order send: " + result + " ClOrdID: " + order.getClOrdID.getValue + ", symbol: " + order.getSymbol.getValue + ", orderQty: " + order.getOrderQty.getValue + ", ordType: " + order.getOrdType.getValue + ", account: " + order.getAccount.getValue)
+    LOGGER.info("OrderGenerator started. Order generating with delay: {}", maxDelay)
+    def waitForLogon = {
+      while (loggedSessions.size < fixSessions.size) {
+        LOGGER.debug("Waiting for logging to FIX Session")
+        Thread.sleep(1000)
+      }
+      LOGGER.info("Logged to fix sessions: {}", loggedSessions)
     }
+
+    waitForLogon
+
+    var threads: List[Thread] = List()
+    for (session <- loggedSessions) {
+      for (no <- 1 to threadsPerFixSession) {
+        val threadName = session.getSessionID.getSenderCompID + "_" + no;
+        val thread = new Thread(new AsyncOrderGeneratorSender(session), threadName)
+        thread.start
+        threads = thread :: threads
+      }
+    }
+
+    while (!threads.filter(_.isAlive).isEmpty) {
+      Thread.sleep(1000)
+    }
+
+
+    fixInitiator.stop
   }
 
   def initFixInitiator(): SocketInitiator = {
@@ -41,11 +67,17 @@ object App {
     socketInitiator
   }
 
-  def waitForLogon(session: Session) = {
-    while (!session.isLoggedOn) {
-      LOGGER.debug("Waiting for logging to FIX Session")
-      Thread.sleep(300)
+  class AsyncOrderGeneratorSender(session: Session) extends Runnable {
+    override def run(): Unit = {
+      while (session.isLoggedOn) {
+        val order = OrderGenerator.next
+        val result = session.send(order)
+        LOGGER.debug("Order send: " + result + " ClOrdID: " + order.getClOrdID.getValue + ", symbol: " + order.getSymbol.getValue + ", orderQty: " + order.getOrderQty.getValue + ", ordType: " + order.getOrdType.getValue + ", account: " + order.getAccount.getValue)
+        Thread.sleep(RandomUtils.random(minDelay, maxDelay))
+      }
     }
-    LOGGER.info("Logged to fix session: {}", session.getSessionID)
   }
+
 }
+
+
