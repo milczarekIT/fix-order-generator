@@ -19,6 +19,7 @@ object App {
 
     LOGGER.info("OrderGenerator started. Order generating with delay: {}", delay)
     val fixSession = initFixInitiator.getManagedSessions.iterator.next
+
     waitForLogon(fixSession)
 
     while (true) {
@@ -37,7 +38,7 @@ object App {
     val fileLogFactory = new FileLogFactory(fixOrderHandlerSettings)
     val socketInitiator = new SocketInitiator(application, fileStoreFactory, fixOrderHandlerSettings, fileLogFactory, messageFactory)
     socketInitiator.start
-    return socketInitiator
+    socketInitiator
   }
 
   def waitForLogon(session: Session) = {

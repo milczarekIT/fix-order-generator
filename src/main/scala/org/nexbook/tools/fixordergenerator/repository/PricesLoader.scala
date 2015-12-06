@@ -1,5 +1,6 @@
 package org.nexbook.tools.fixordergenerator.repository
 
+import com.typesafe.config.ConfigFactory
 import dispatch.Defaults._
 import dispatch._
 import net.liftweb.json.JsonAST.{JNull, JString}
@@ -12,15 +13,17 @@ import org.joda.time.DateTime
 class PricesLoader(symbols: List[String]) {
 
   implicit val formats = Serialization.formats(NoTypeHints) ++ List(DateTimeSerializer)
-
-  val OANDA_API_URL = "http://api-sandbox.oanda.com/v1"
+  val config = ConfigFactory.load()
+  val OANDA_API_URL = "https://api-fxpractice.oanda.com/v1/"
   val pricesUrl = OANDA_API_URL + "/prices?instruments=" + toOandaUrlEncodedSymbolsFormat
 
   def loadCurrentPrices: Map[String, (Double, Double)] = {
-    val strResponse = Http(url(pricesUrl) OK as.String).apply
+    val strResponse = Http(request OK as.String).apply
     val prices = JsonParser.parse(strResponse) \\ "prices"
     toMap(prices.extract[List[OandaApiPriceDTO]])
   }
+
+  def request = url(pricesUrl).addHeader("Authorization", "Bearer " + config.getString("org.nexbook.oandaApiKey"))
 
   private def toMap(dtos: List[OandaApiPriceDTO]): Map[String, (Double, Double)] = dtos.map(dto => (dto.instrument.replace("_", "/") ->(dto.bid, dto.ask))).toMap
 
