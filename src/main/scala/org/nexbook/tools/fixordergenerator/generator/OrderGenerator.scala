@@ -36,7 +36,7 @@ object OrderGenerator {
 
   private def currentTransactTime = new TransactTime(DateTime.now(DateTimeZone.UTC).toDate)
 
-  private def ordType = RandomUtils.weightedRandom(availableOrderTypes)
+  private def ordType = new OrdType(OrdType.LIMIT) //RandomUtils.weightedRandom(availableOrderTypes)
 
   private def orderQty = ((Random.nextInt(100) + 1) * 1000).toDouble
 

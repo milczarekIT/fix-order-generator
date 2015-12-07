@@ -59,7 +59,7 @@ class FixApplication extends Application {
   }
 
   override def fromApp(message: Message, sessionId: SessionID) {
-    LOGGER.debug("FromApp: {}", message)
+    LOGGER.info("FromApp: {}", message)
 
   }
 }

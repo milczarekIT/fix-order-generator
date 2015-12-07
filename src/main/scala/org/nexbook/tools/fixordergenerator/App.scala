@@ -14,9 +14,8 @@ object App {
   val LOGGER = LoggerFactory.getLogger(classOf[App])
 
   val minDelay = 300
-  val maxDelay = 2000
-  val threadsPerFixSession = 5
-
+  val maxDelay = 5000
+  val threadsPerFixSession = 3
 
   def main(args: Array[String]) = {
     val prices = new PricesLoader(SymbolGenerator.all).loadCurrentPrices
@@ -28,32 +27,38 @@ object App {
     def loggedSessions = fixSessions.filter(_.isLoggedOn)
 
     LOGGER.info("OrderGenerator started. Order generating with delay: {}", maxDelay)
-    def waitForLogon = {
-      while (loggedSessions.size < fixSessions.size) {
-        LOGGER.debug("Waiting for logging to FIX Session")
+
+
+    def startWork: Unit = {
+      def waitForLogon = {
+        while (loggedSessions.size < fixSessions.size) {
+          LOGGER.debug("Waiting for logging to FIX Session")
+          Thread.sleep(1000)
+        }
+        LOGGER.info("Logged to fix sessions: {}", loggedSessions)
+      }
+      waitForLogon
+      var threads: List[Thread] = List()
+
+      def allThreadsDead = threads.filter(_.isAlive).isEmpty
+
+      for (session <- loggedSessions) {
+        for (no <- 1 to threadsPerFixSession) {
+          val threadName = session.getSessionID.getSenderCompID + "_" + no
+          val thread = new Thread(new AsyncOrderGeneratorSender(session), threadName)
+          thread.start
+          threads = thread :: threads
+        }
+      }
+
+      while (!allThreadsDead) {
         Thread.sleep(1000)
       }
-      LOGGER.info("Logged to fix sessions: {}", loggedSessions)
+      startWork
     }
 
-    waitForLogon
-
-    var threads: List[Thread] = List()
-    for (session <- loggedSessions) {
-      for (no <- 1 to threadsPerFixSession) {
-        val threadName = session.getSessionID.getSenderCompID + "_" + no;
-        val thread = new Thread(new AsyncOrderGeneratorSender(session), threadName)
-        thread.start
-        threads = thread :: threads
-      }
-    }
-
-    while (!threads.filter(_.isAlive).isEmpty) {
-      Thread.sleep(1000)
-    }
-
-
-    fixInitiator.stop
+    startWork
+    //fixInitiator.stop
   }
 
   def initFixInitiator(): SocketInitiator = {
