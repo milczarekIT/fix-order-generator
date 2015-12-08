@@ -2,9 +2,9 @@ package org.nexbook.tools.fixordergenerator.generator
 
 import java.util.UUID
 
-import org.joda.time.{DateTimeZone, DateTime}
-import quickfix.field.{TransactTime, ClOrdID, OrigClOrdID}
-import quickfix.fix44.{OrderCancelRequest, NewOrderSingle}
+import org.joda.time.{DateTime, DateTimeZone}
+import quickfix.field.{ClOrdID, OrigClOrdID, TransactTime}
+import quickfix.fix44.{NewOrderSingle, OrderCancelRequest}
 
 /**
  * Created by milczu on 08.12.15.

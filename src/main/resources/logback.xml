@@ -16,12 +16,12 @@
 
     <logger name="quickfix.mina.NetworkingOptions" level="warn"/>
     <logger name="quickfix.mina.message.FIXMessageDecoder" level="info"/>
-    <logger name="com.ning.http" level="info" />
+    <logger name="com.ning.http" level="info"/>
 
     <logger name="org.nexbook.tools.fixordergenerator.fix" level="info"/>
 
     <root level="debug">
-        <appender-ref ref="STDOUT" />
-        <appender-ref ref="FILE" />
+        <appender-ref ref="STDOUT"/>
+        <appender-ref ref="FILE"/>
     </root>
 </configuration>

@@ -44,7 +44,7 @@ object OrderGenerator {
 
   private def ordTypeDependent(order: NewOrderSingle) = order.getOrdType.getValue match {
     case OrdType.LIMIT =>
-      def randomizedPriceMultiplier(side: Char) = if(side == Side.BUY) RandomUtils.random(0.97, 1.05) else RandomUtils.random(0.95, 1.03)
+      def randomizedPriceMultiplier(side: Char) = if (side == Side.BUY) RandomUtils.random(0.97, 1.05) else RandomUtils.random(0.95, 1.03)
       val priceFromRepo = PriceRepository.priceForSymbol(order.getSymbol.getValue, order.getSide)
       val randomizedPrice = priceFromRepo * randomizedPriceMultiplier(order.getSide.getValue)
       val roundedPrice = BigDecimal(randomizedPrice).setScale(5, BigDecimal.RoundingMode.HALF_UP).toDouble

@@ -2,12 +2,10 @@ package org.nexbook.tools.fixordergenerator.fix
 
 import org.slf4j.{Logger, LoggerFactory}
 import quickfix._
-import quickfix.field.{BeginString, Password, ResetSeqNumFlag}
-import quickfix.fix44.Logon
 
 
 /**
- * Created by milczu on 15.12.14.
+ * Created by milczu on 15.12.14
  */
 class FixApplication extends Application {
 

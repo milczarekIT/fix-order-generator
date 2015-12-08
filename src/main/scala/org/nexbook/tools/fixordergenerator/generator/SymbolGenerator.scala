@@ -1,6 +1,7 @@
 package org.nexbook.tools.fixordergenerator.generator
 
 import com.typesafe.config.ConfigFactory
+
 import scala.collection.JavaConverters._
 import scala.util.Random
 

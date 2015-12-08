@@ -1,12 +1,12 @@
 package org.nexbook.tools.fixordergenerator.generator
 
-import akka.actor.{Actor, ActorSystem, Props}
+import akka.actor.{ActorSystem, Props}
 import com.typesafe.config.ConfigFactory
-import org.nexbook.tools.fixordergenerator.fix.{FixMessageToSend, FixMessageSenderActor}
+import org.nexbook.tools.fixordergenerator.fix.{FixMessageSenderActor, FixMessageToSend}
 import org.nexbook.tools.fixordergenerator.utils.RandomUtils
 import org.slf4j.LoggerFactory
+import quickfix.Session
 import quickfix.fix44.NewOrderSingle
-import quickfix.{Message, Session}
 
 import scala.concurrent.duration._
 

@@ -11,7 +11,7 @@ object RandomUtils {
    * @param start inclusive
    * @param end inclusive
    */
-  def random(start: Int, end: Int):Int = Random.nextInt(end - start + 1) + start
+  def random(start: Int, end: Int): Int = Random.nextInt(end - start + 1) + start
 
   def random(start: Double, end: Double): Double = Random.nextDouble() * (end - start) + start
 

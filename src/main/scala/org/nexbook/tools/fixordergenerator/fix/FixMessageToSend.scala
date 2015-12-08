@@ -1,6 +1,6 @@
 package org.nexbook.tools.fixordergenerator.fix
 
-import quickfix.{Session, Message}
+import quickfix.{Message, Session}
 
 /**
  * Created by milczu on 08.12.15.
