@@ -16,7 +16,7 @@ object PriceRepository {
     case Side.SELL => prices.getOrElse(symbol, defaultPrices(symbol))._2
   }
 
-  def updatePrices(newPrices: Map[String, (Double, Double)]) = if (!newPrices.isEmpty) prices = newPrices
+  def updatePrices(newPrices: Map[String, (Double, Double)]) = if (newPrices.nonEmpty) prices = newPrices
 
 
 }

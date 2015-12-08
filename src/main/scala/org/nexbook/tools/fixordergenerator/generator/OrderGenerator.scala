@@ -17,9 +17,9 @@ import scala.util.Random
 object OrderGenerator {
 
   val availableSides: List[Side] = List(new Side(Side.BUY), new Side(Side.SELL))
-  val availableOrderTypes: List[(Int, OrdType)] = List((2 -> new OrdType(OrdType.MARKET)), (7 -> new OrdType(OrdType.LIMIT)))
+  val availableOrderTypes: List[(Int, OrdType)] = List(4 -> new OrdType(OrdType.MARKET), 7 -> new OrdType(OrdType.LIMIT))
 
-  def next(count: Int): List[NewOrderSingle] = Seq.fill(count)(next).toList
+  def next(count: Int): List[NewOrderSingle] = Seq.fill(count)(next()).toList
 
   def next(): NewOrderSingle = {
     val order = new NewOrderSingle(clOrdId, side, currentTransactTime, ordType)
@@ -36,21 +36,20 @@ object OrderGenerator {
 
   private def currentTransactTime = new TransactTime(DateTime.now(DateTimeZone.UTC).toDate)
 
-  private def ordType = new OrdType(OrdType.LIMIT) //RandomUtils.weightedRandom(availableOrderTypes)
+  private def ordType = RandomUtils.weightedRandom(availableOrderTypes)
 
   private def orderQty = ((Random.nextInt(100) + 1) * 1000).toDouble
 
-  private def account = new Account("%05d".format((Random.nextInt(500) + 1)))
-
+  private def account = new Account("%05d".format(Random.nextInt(500) + 1))
 
   private def ordTypeDependent(order: NewOrderSingle) = order.getOrdType.getValue match {
-    case OrdType.LIMIT => {
-      val priceFromRepo = PriceRepository.priceForSymbol(order.getSymbol.getValue, order.getSide);
-      val randomizedPrice = priceFromRepo * RandomUtils.random(0.96, 1.04);
+    case OrdType.LIMIT =>
+      def randomizedPriceMultiplier(side: Char) = if(side == Side.BUY) RandomUtils.random(0.97, 1.05) else RandomUtils.random(0.95, 1.03)
+      val priceFromRepo = PriceRepository.priceForSymbol(order.getSymbol.getValue, order.getSide)
+      val randomizedPrice = priceFromRepo * randomizedPriceMultiplier(order.getSide.getValue)
       val roundedPrice = BigDecimal(randomizedPrice).setScale(5, BigDecimal.RoundingMode.HALF_UP).toDouble
       order.set(new Price(roundedPrice))
       order
-    }
     case _ => order
   }
 

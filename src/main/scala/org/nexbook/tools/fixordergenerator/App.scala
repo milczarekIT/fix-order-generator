@@ -26,7 +26,7 @@ object App {
 
     def loggedSessions = fixSessions.filter(_.isLoggedOn)
 
-    LOGGER.info("OrderGenerator started. Order generating with delay: {}", maxDelay)
+    LOGGER.info("OrderGenerator started. Order generating with delay: {}-{}", minDelay, maxDelay)
 
 
     def startWork: Unit = {
@@ -58,7 +58,6 @@ object App {
     }
 
     startWork
-    //fixInitiator.stop
   }
 
   def initFixInitiator(): SocketInitiator = {

@@ -24,7 +24,7 @@ class FixApplication extends Application {
 
   def sendLogonRequest(sessionId: SessionID) = {
     val logon = new Logon
-    val header = logon.getHeader();
+    val header = logon.getHeader
     header.setField(new BeginString("FIX.4.4"))
     logon.set(new ResetSeqNumFlag(true))
     logon.set(new Password("n/a"))
@@ -59,7 +59,6 @@ class FixApplication extends Application {
   }
 
   override def fromApp(message: Message, sessionId: SessionID) {
-    LOGGER.info("FromApp: {}", message)
-
+    LOGGER.debug("FromApp: {}", message)
   }
 }

@@ -25,7 +25,7 @@ class PricesLoader(symbols: List[String]) {
 
   def request = url(pricesUrl).addHeader("Authorization", "Bearer " + config.getString("org.nexbook.oandaApiKey"))
 
-  private def toMap(dtos: List[OandaApiPriceDTO]): Map[String, (Double, Double)] = dtos.map(dto => (dto.instrument.replace("_", "/") ->(dto.bid, dto.ask))).toMap
+  private def toMap(dtos: List[OandaApiPriceDTO]): Map[String, (Double, Double)] = dtos.map(dto => dto.instrument.replace("_", "/") ->(dto.bid, dto.ask)).toMap
 
   private def toOandaUrlEncodedSymbolsFormat: String = symbols.map(_.replace("/", "_")).toList.mkString("%2C")
 

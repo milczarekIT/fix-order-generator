@@ -9,7 +9,7 @@ import scala.util.Random
  */
 object SymbolGenerator {
 
-  private val symbols = ConfigFactory.load().getStringList("org.nexbook.symbols").asScala.toList //List("EUR/USD", "AUD/USD", "GBP/USD", "USD/JPY", "EUR/JPY", "EUR/GBP", "USD/CAD", "USD/CHF")
+  private val symbols = ConfigFactory.load().getStringList("org.nexbook.symbols").asScala.toList
 
   def randomSymbol = Random.shuffle(symbols).head
 
