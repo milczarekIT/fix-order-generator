@@ -17,11 +17,11 @@ import scala.util.Random
 object OrderGenerator {
 
   val availableSides: List[Side] = List(new Side(Side.BUY), new Side(Side.SELL))
-  val availableOrderTypes: List[(Int, OrdType)] = List(4 -> new OrdType(OrdType.MARKET), 7 -> new OrdType(OrdType.LIMIT))
+  val availableOrderTypes: List[(Int, OrdType)] = List(3 -> new OrdType(OrdType.MARKET), 7 -> new OrdType(OrdType.LIMIT))
 
-  def next(count: Int): List[NewOrderSingle] = Seq.fill(count)(next()).toList
+  def generate(count: Int): List[NewOrderSingle] = Seq.fill(count)(generate()).toList
 
-  def next(): NewOrderSingle = {
+  def generate(): NewOrderSingle = {
     val order = new NewOrderSingle(clOrdId, side, currentTransactTime, ordType)
     order.set(new OrderQty(orderQty))
     order.set(new Symbol(SymbolGenerator.randomSymbol))

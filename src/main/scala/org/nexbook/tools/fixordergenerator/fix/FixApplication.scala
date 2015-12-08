@@ -13,25 +13,9 @@ class FixApplication extends Application {
 
   val LOGGER: Logger = LoggerFactory.getLogger(classOf[FixApplication])
 
-  var sessionId: SessionID = null
-
-
   override def onCreate(sessionId: SessionID) {
     LOGGER.info("FixApplication Session Created with SessionID = " + sessionId)
-    this.sessionId = sessionId
-    sendLogonRequest(sessionId)
   }
-
-  def sendLogonRequest(sessionId: SessionID) = {
-    val logon = new Logon
-    val header = logon.getHeader
-    header.setField(new BeginString("FIX.4.4"))
-    logon.set(new ResetSeqNumFlag(true))
-    logon.set(new Password("n/a"))
-    Session.sendToTarget(logon, sessionId)
-    LOGGER.info("Logon Message Sent")
-  }
-
 
   override def onLogon(sessionId: SessionID) {
     LOGGER.info("Logon: {}", sessionId)

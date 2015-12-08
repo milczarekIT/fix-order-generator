@@ -1,7 +1,8 @@
 package org.nexbook.tools.fixordergenerator
 
+import com.typesafe.config.ConfigFactory
 import org.nexbook.tools.fixordergenerator.fix.FixApplication
-import org.nexbook.tools.fixordergenerator.generator.{OrderGenerator, SymbolGenerator}
+import org.nexbook.tools.fixordergenerator.generator._
 import org.nexbook.tools.fixordergenerator.repository.{PriceRepository, PricesLoader}
 import org.nexbook.tools.fixordergenerator.utils.RandomUtils
 import org.slf4j.LoggerFactory
@@ -12,6 +13,8 @@ import scala.collection.JavaConverters._
 object App {
 
   val LOGGER = LoggerFactory.getLogger(classOf[App])
+  val config = ConfigFactory.load().getConfig("org.nexbook")
+
 
   val minDelay = 300
   val maxDelay = 5000
@@ -23,6 +26,8 @@ object App {
     PriceRepository.updatePrices(prices)
     val fixInitiator = initFixInitiator
     val fixSessions = fixInitiator.getManagedSessions.asScala
+    val orderCancelExecutor = new OrderCancelExecutor
+    val postOrderGenerators: List[PostOrderGenerator] = List(orderCancelExecutor)
 
     def loggedSessions = fixSessions.filter(_.isLoggedOn)
 
@@ -32,7 +37,7 @@ object App {
     def startWork: Unit = {
       def waitForLogon = {
         while (loggedSessions.size < fixSessions.size) {
-          LOGGER.debug("Waiting for logging to FIX Session")
+          LOGGER.trace("Waiting for logging to FIX Session")
           Thread.sleep(1000)
         }
         LOGGER.info("Logged to fix sessions: {}", loggedSessions)
@@ -45,7 +50,7 @@ object App {
       for (session <- loggedSessions) {
         for (no <- 1 to threadsPerFixSession) {
           val threadName = session.getSessionID.getSenderCompID + "_" + no
-          val thread = new Thread(new AsyncOrderGeneratorSender(session), threadName)
+          val thread = new Thread(new AsyncOrderGeneratorSender(session, postOrderGenerators), threadName)
           thread.start
           threads = thread :: threads
         }
@@ -71,12 +76,14 @@ object App {
     socketInitiator
   }
 
-  class AsyncOrderGeneratorSender(session: Session) extends Runnable {
+  class AsyncOrderGeneratorSender(session: Session, postOrderGenerators: List[PostOrderGenerator]) extends Runnable {
+
     override def run(): Unit = {
       while (session.isLoggedOn) {
-        val order = OrderGenerator.next
-        val result = session.send(order)
-        LOGGER.debug("Order send: " + result + " ClOrdID: " + order.getClOrdID.getValue + ", symbol: " + order.getSymbol.getValue + ", orderQty: " + order.getOrderQty.getValue + ", ordType: " + order.getOrdType.getValue + ", account: " + order.getAccount.getValue)
+        val order = OrderGenerator.generate
+        session.send(order)
+        LOGGER.debug("Order send. ClOrdID: " + order.getClOrdID.getValue + ", symbol: " + order.getSymbol.getValue + ", orderQty: " + order.getOrderQty.getValue + ", ordType: " + order.getOrdType.getValue + ", account: " + order.getAccount.getValue)
+        postOrderGenerators.foreach(_.afterOrderGenerated(order, session))
         Thread.sleep(RandomUtils.random(minDelay, maxDelay))
       }
     }
