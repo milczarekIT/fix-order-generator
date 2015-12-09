@@ -23,14 +23,14 @@ class OrderCancelExecutor extends PostOrderGenerator {
   val config = ConfigFactory.load().getConfig("org.nexbook.cancelOrder")
   val cancelOrderRate = config.getInt("rate")
   val minDelay = config.getInt("minDelayInSecs")
-  val maxDelay = config.getInt("minDelayInSecs")
+  val maxDelay = config.getInt("maxDelayInSecs")
 
   logger.info("OrderCancelExecutor initialized. cancelOrderRate: {}, Delay: {}-{}", cancelOrderRate.toString, minDelay.toString, maxDelay.toString)
 
   override def afterOrderGenerated(order: NewOrderSingle, session: Session): Unit = scheduleOrderCancelIfNeeded(order, session)
 
   def scheduleOrderCancelIfNeeded(newOrderSingle: NewOrderSingle, session: Session): Unit = {
-    def shouldBeCancelled = RandomUtils.random(0, cancelOrderRate) == 0
+    def shouldBeCancelled = RandomUtils.random(0, 100) <= cancelOrderRate
 
     if (shouldBeCancelled) {
       val orderCancel = OrderCancelRequestGenerator generate newOrderSingle
