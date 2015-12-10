@@ -17,10 +17,10 @@ class OrderCancelExecutor(system: ActorSystem, fixMessageSenderActor: ActorRef) 
 
   val logger = LoggerFactory.getLogger(classOf[OrderCancelExecutor])
 
-  val config = ConfigFactory.load().getConfig("org.nexbook.cancelOrder")
+  val config = ConfigFactory.load().getConfig("org.nexbook.generator.cancelOrder")
   val cancelOrderRate = config.getInt("rate")
-  val minDelay = config.getInt("minDelayInSecs")
-  val maxDelay = config.getInt("maxDelayInSecs")
+  val minDelay = config.getInt("minDelayInMillis")
+  val maxDelay = config.getInt("maxDelayInMillis")
 
   logger.info("OrderCancelExecutor initialized. cancelOrderRate: {}, Delay: {}-{}", cancelOrderRate.toString, minDelay.toString, maxDelay.toString)
 
@@ -35,7 +35,7 @@ class OrderCancelExecutor(system: ActorSystem, fixMessageSenderActor: ActorRef) 
       logger.info("Order with clOrdId: {} will be cancelled with clOrdId: {} in {} secs", orderCancel.getOrigClOrdID.getValue, orderCancel.getClOrdID.getValue, delay.toString)
 
       import system.dispatcher
-      system.scheduler.scheduleOnce(delay seconds, fixMessageSenderActor, new FixMessageToSend(orderCancel, session))
+      system.scheduler.scheduleOnce(delay millis, fixMessageSenderActor, new FixMessageToSend(orderCancel, session))
     }
   }
 

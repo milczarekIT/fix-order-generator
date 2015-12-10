@@ -14,19 +14,20 @@ import scala.collection.JavaConverters._
 object App {
 
   val LOGGER = LoggerFactory.getLogger(classOf[App])
-  val config = ConfigFactory.load().getConfig("org.nexbook")
+  val config = ConfigFactory.load().getConfig("org.nexbook.generator")
 
   val actorSystem = ActorSystem("FixMessageSenderSystem")
   val fixMessageSenderActor = actorSystem.actorOf(Props[FixMessageSenderActor], name = "listener")
 
-  val minDelay = 300
-  val maxDelay = 5000
+  val minDelay = config.getInt("minDelayInMillis")
+  val maxDelay = config.getInt("maxDelayInMillis")
   val threadsPerFixSession = 3
 
   def main(args: Array[String]) = {
     val prices = new PricesLoader(SymbolGenerator.all).loadCurrentPrices
     LOGGER.info("Loaded prices: {}", prices)
     PriceRepository.updatePrices(prices)
+    PriceGenerator.updatePrices(prices)
     val fixInitiator = initFixInitiator
     val fixSessions = fixInitiator.getManagedSessions.asScala
     val orderCancelExecutor = new OrderCancelExecutor(actorSystem, fixMessageSenderActor)
@@ -84,9 +85,7 @@ object App {
     override def run(): Unit = {
       while (session.isLoggedOn) {
         val order = OrderGenerator.generate
-        //session.send(order)
         fixMessageSenderActor ! FixMessageToSend(order, session)
-        //LOGGER.debug("Order send. ClOrdID: " + order.getClOrdID.getValue + ", symbol: " + order.getSymbol.getValue + ", orderQty: " + order.getOrderQty.getValue + ", ordType: " + order.getOrdType.getValue + ", account: " + order.getAccount.getValue)
         postOrderGenerators.foreach(_.afterOrderGenerated(order, session))
         Thread.sleep(RandomUtils.random(minDelay, maxDelay))
       }

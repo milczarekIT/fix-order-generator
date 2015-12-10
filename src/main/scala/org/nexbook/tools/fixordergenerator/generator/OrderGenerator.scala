@@ -17,7 +17,7 @@ import scala.util.Random
 object OrderGenerator {
 
   val availableSides: List[Side] = List(new Side(Side.BUY), new Side(Side.SELL))
-  val availableOrderTypes: List[(Int, OrdType)] = List(3 -> new OrdType(OrdType.MARKET), 7 -> new OrdType(OrdType.LIMIT))
+  val availableOrderTypes: List[(Int, OrdType)] = List(26 -> new OrdType(OrdType.MARKET), 107 -> new OrdType(OrdType.LIMIT))
 
   def generate(count: Int): List[NewOrderSingle] = Seq.fill(count)(generate()).toList
 
@@ -44,11 +44,7 @@ object OrderGenerator {
 
   private def ordTypeDependent(order: NewOrderSingle) = order.getOrdType.getValue match {
     case OrdType.LIMIT =>
-      def randomizedPriceMultiplier(side: Char) = if (side == Side.BUY) RandomUtils.random(0.980, 1.005) else RandomUtils.random(0.995, 1.020)
-      val priceFromRepo = PriceRepository.priceForSymbol(order.getSymbol.getValue, order.getSide)
-      val randomizedPrice = priceFromRepo * randomizedPriceMultiplier(order.getSide.getValue)
-      val roundedPrice = BigDecimal(randomizedPrice).setScale(5, BigDecimal.RoundingMode.HALF_UP).toDouble
-      order.set(new Price(roundedPrice))
+      order.set(new Price(PriceGenerator.generatePrice(order.getSide.getValue, order.getSymbol.getValue)))
       order
     case _ => order
   }
