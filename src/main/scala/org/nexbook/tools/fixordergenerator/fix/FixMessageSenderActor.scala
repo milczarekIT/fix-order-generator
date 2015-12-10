@@ -14,7 +14,7 @@ class FixMessageSenderActor extends Actor {
   override def receive = {
     case p: FixMessageToSend =>
       if (p.session.isLoggedOn) {
-        logger.info("Sending message: {}", p.message)
+        logger.debug("Sending message: {}", p.message)
         Session.sendToTarget(p.message, p.session.getSessionID)
       } else {
         logger.info("Trying to send message: {}, but session {} is logged out", p.message.asInstanceOf[Any], p.session.asInstanceOf[Any])

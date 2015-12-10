@@ -1,7 +1,8 @@
 package org.nexbook.tools.fixordergenerator
 
+import akka.actor.{Props, ActorSystem}
 import com.typesafe.config.ConfigFactory
-import org.nexbook.tools.fixordergenerator.fix.FixApplication
+import org.nexbook.tools.fixordergenerator.fix.{FixMessageToSend, FixMessageSenderActor, FixApplication}
 import org.nexbook.tools.fixordergenerator.generator._
 import org.nexbook.tools.fixordergenerator.repository.{PriceRepository, PricesLoader}
 import org.nexbook.tools.fixordergenerator.utils.RandomUtils
@@ -15,6 +16,8 @@ object App {
   val LOGGER = LoggerFactory.getLogger(classOf[App])
   val config = ConfigFactory.load().getConfig("org.nexbook")
 
+  val actorSystem = ActorSystem("FixMessageSenderSystem")
+  val fixMessageSenderActor = actorSystem.actorOf(Props[FixMessageSenderActor], name = "listener")
 
   val minDelay = 300
   val maxDelay = 5000
@@ -26,7 +29,7 @@ object App {
     PriceRepository.updatePrices(prices)
     val fixInitiator = initFixInitiator
     val fixSessions = fixInitiator.getManagedSessions.asScala
-    val orderCancelExecutor = new OrderCancelExecutor
+    val orderCancelExecutor = new OrderCancelExecutor(actorSystem, fixMessageSenderActor)
     val postOrderGenerators: List[PostOrderGenerator] = List(orderCancelExecutor)
 
     def loggedSessions = fixSessions.filter(_.isLoggedOn)
@@ -81,8 +84,9 @@ object App {
     override def run(): Unit = {
       while (session.isLoggedOn) {
         val order = OrderGenerator.generate
-        session.send(order)
-        LOGGER.debug("Order send. ClOrdID: " + order.getClOrdID.getValue + ", symbol: " + order.getSymbol.getValue + ", orderQty: " + order.getOrderQty.getValue + ", ordType: " + order.getOrdType.getValue + ", account: " + order.getAccount.getValue)
+        //session.send(order)
+        fixMessageSenderActor ! FixMessageToSend(order, session)
+        //LOGGER.debug("Order send. ClOrdID: " + order.getClOrdID.getValue + ", symbol: " + order.getSymbol.getValue + ", orderQty: " + order.getOrderQty.getValue + ", ordType: " + order.getOrdType.getValue + ", account: " + order.getAccount.getValue)
         postOrderGenerators.foreach(_.afterOrderGenerated(order, session))
         Thread.sleep(RandomUtils.random(minDelay, maxDelay))
       }

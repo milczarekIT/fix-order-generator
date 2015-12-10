@@ -37,10 +37,10 @@ class FixApplication extends Application {
 
   @throws(classOf[DoNotSend])
   override def toApp(message: Message, sessionId: SessionID) {
-    LOGGER.debug("ToApp: {}", message)
+    LOGGER.trace("ToApp: {}", message)
   }
 
   override def fromApp(message: Message, sessionId: SessionID) {
-    LOGGER.debug("FromApp: {}", message)
+    LOGGER.trace("FromApp: {}", message)
   }
 }

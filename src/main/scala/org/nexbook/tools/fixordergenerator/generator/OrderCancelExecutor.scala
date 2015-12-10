@@ -1,6 +1,6 @@
 package org.nexbook.tools.fixordergenerator.generator
 
-import akka.actor.{ActorSystem, Props}
+import akka.actor.{ActorRef, ActorSystem, Props}
 import com.typesafe.config.ConfigFactory
 import org.nexbook.tools.fixordergenerator.fix.{FixMessageSenderActor, FixMessageToSend}
 import org.nexbook.tools.fixordergenerator.utils.RandomUtils
@@ -13,12 +13,9 @@ import scala.concurrent.duration._
 /**
  * Created by milczu on 08.12.15.
  */
-class OrderCancelExecutor extends PostOrderGenerator {
+class OrderCancelExecutor(system: ActorSystem, fixMessageSenderActor: ActorRef) extends PostOrderGenerator {
 
   val logger = LoggerFactory.getLogger(classOf[OrderCancelExecutor])
-
-  val system = ActorSystem("OrderCancelExecutorSystem")
-  val orderCancelFixSenderActor = system.actorOf(Props[FixMessageSenderActor], name = "listener")
 
   val config = ConfigFactory.load().getConfig("org.nexbook.cancelOrder")
   val cancelOrderRate = config.getInt("rate")
@@ -38,7 +35,7 @@ class OrderCancelExecutor extends PostOrderGenerator {
       logger.info("Order with clOrdId: {} will be cancelled with clOrdId: {} in {} secs", orderCancel.getOrigClOrdID.getValue, orderCancel.getClOrdID.getValue, delay.toString)
 
       import system.dispatcher
-      system.scheduler.scheduleOnce(delay seconds, orderCancelFixSenderActor, new FixMessageToSend(orderCancel, session))
+      system.scheduler.scheduleOnce(delay seconds, fixMessageSenderActor, new FixMessageToSend(orderCancel, session))
     }
   }
 

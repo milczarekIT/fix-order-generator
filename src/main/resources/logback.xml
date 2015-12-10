@@ -18,7 +18,7 @@
     <logger name="quickfix.mina.message.FIXMessageDecoder" level="info"/>
     <logger name="com.ning.http" level="info"/>
 
-    <logger name="org.nexbook.tools.fixordergenerator.fix" level="info"/>
+    <logger name="org.nexbook.tools.fixordergenerator.fix" level="debug"/>
 
     <root level="debug">
         <appender-ref ref="STDOUT"/>
