@@ -1,8 +1,8 @@
 package org.nexbook.tools.fixordergenerator.generator
 
-import akka.actor.{ActorRef, ActorSystem, Props}
-import com.typesafe.config.ConfigFactory
-import org.nexbook.tools.fixordergenerator.fix.{FixMessageSenderActor, FixMessageToSend}
+import akka.actor.{ActorRef, ActorSystem}
+import com.typesafe.config.Config
+import org.nexbook.tools.fixordergenerator.fix.FixMessageToSend
 import org.nexbook.tools.fixordergenerator.utils.RandomUtils
 import org.slf4j.LoggerFactory
 import quickfix.Session
@@ -13,11 +13,10 @@ import scala.concurrent.duration._
 /**
  * Created by milczu on 08.12.15.
  */
-class OrderCancelExecutor(system: ActorSystem, fixMessageSenderActor: ActorRef) extends PostOrderGenerator {
+class OrderCancelExecutor(system: ActorSystem, fixMessageSenderActor: ActorRef, config: Config) extends PostOrderGenerator {
 
   val logger = LoggerFactory.getLogger(classOf[OrderCancelExecutor])
 
-  val config = ConfigFactory.load().getConfig("org.nexbook.generator.cancelOrder")
   val cancelOrderRate = config.getInt("rate")
   val minDelay = config.getInt("minDelayInMillis")
   val maxDelay = config.getInt("maxDelayInMillis")

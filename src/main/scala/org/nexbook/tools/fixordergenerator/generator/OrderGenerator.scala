@@ -4,7 +4,6 @@ package org.nexbook.tools.fixordergenerator.generator
 import java.util.UUID
 
 import org.joda.time.{DateTime, DateTimeZone}
-import org.nexbook.tools.fixordergenerator.repository.PriceRepository
 import org.nexbook.tools.fixordergenerator.utils.RandomUtils
 import quickfix.field._
 import quickfix.fix44.NewOrderSingle
@@ -14,7 +13,7 @@ import scala.util.Random
 /**
  * Created by milczu on 15.12.14.
  */
-object OrderGenerator {
+class OrderGenerator(symbolGenerator: SymbolGenerator) {
 
   val availableSides: List[Side] = List(new Side(Side.BUY), new Side(Side.SELL))
   val availableOrderTypes: List[(Int, OrdType)] = List(26 -> new OrdType(OrdType.MARKET), 107 -> new OrdType(OrdType.LIMIT))
@@ -24,7 +23,7 @@ object OrderGenerator {
   def generate(): NewOrderSingle = {
     val order = new NewOrderSingle(clOrdId, side, currentTransactTime, ordType)
     order.set(new OrderQty(orderQty))
-    order.set(new Symbol(SymbolGenerator.randomSymbol))
+    order.set(new Symbol(symbolGenerator.randomSymbol))
     order.set(account)
     ordTypeDependent(order)
     order

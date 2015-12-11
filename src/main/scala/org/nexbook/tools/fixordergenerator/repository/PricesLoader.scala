@@ -13,7 +13,7 @@ import org.joda.time.DateTime
 class PricesLoader(symbols: List[String]) {
 
   implicit val formats = Serialization.formats(NoTypeHints) ++ List(DateTimeSerializer)
-  val config = ConfigFactory.load()
+  val apiKey = ConfigFactory.load("config/private.conf").getString("org.nexbook.oandaApiKey")
   val OANDA_API_URL = "https://api-fxpractice.oanda.com/v1/"
   val pricesUrl = OANDA_API_URL + "/prices?instruments=" + toOandaUrlEncodedSymbolsFormat
 
@@ -23,7 +23,7 @@ class PricesLoader(symbols: List[String]) {
     toMap(prices.extract[List[OandaApiPriceDTO]])
   }
 
-  def request = url(pricesUrl).addHeader("Authorization", "Bearer " + config.getString("org.nexbook.oandaApiKey"))
+  def request = url(pricesUrl).addHeader("Authorization", "Bearer " + apiKey)
 
   private def toMap(dtos: List[OandaApiPriceDTO]): Map[String, (Double, Double)] = dtos.map(dto => dto.instrument.replace("_", "/") ->(dto.bid, dto.ask)).toMap
 
