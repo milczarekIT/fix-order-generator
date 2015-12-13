@@ -7,7 +7,7 @@ import quickfix.field.Side
  */
 object PriceRepository {
 
-  val defaultPrices = Map("EUR/USD" ->(1.24885, 1.24888), "AUD/USD" ->(0.821075, 0.821092), "GBP/USD" ->(1.57265, 1.57278), "USD/JPY" ->(117.205813, 117.205828), "EUR/JPY" ->(146.37248, 146.37258), "EUR/GBP" ->(0.794105491, 0.794105499), "USD/CAD" ->(1.16375011, 1.16375019), "USD/CHF" ->(0.961675315, 0.961675478))
+  val defaultPrices = Map("EUR/USD" ->(1.24885, 1.24988), "AUD/USD" ->(0.82107, 0.82119), "GBP/USD" ->(1.57265, 1.57378), "USD/JPY" ->(117.20581, 117.20592), "EUR/JPY" ->(146.37248, 146.37358), "EUR/GBP" ->(0.79410, 0.79421), "USD/CAD" ->(1.16361, 1.16379), "USD/CHF" ->(0.96167, 0.96179))
 
   var prices: Map[String, (Double, Double)] = defaultPrices
 

@@ -18,14 +18,29 @@
         <appender-ref ref="FILE"/>
     </appender>
 
+    <appender name="MESSAGES" class="ch.qos.logback.core.FileAppender">
+        <file>messages.log</file>
+        <append>false</append>
+        <encoder>
+            <pattern>%msg%n</pattern>
+        </encoder>
+    </appender>
+
+    <appender name="MESSAGES_ASYNC" class="ch.qos.logback.classic.AsyncAppender">
+        <appender-ref ref="MESSAGES"/>
+    </appender>
+
     <logger name="quickfix.mina.NetworkingOptions" level="warn"/>
     <logger name="quickfix.mina.message.FIXMessageDecoder" level="info"/>
     <logger name="com.ning.http" level="info"/>
+    <logger name="MESSAGES" level="debug" additivity="false">
+        <appender-ref ref="MESSAGES"/>
+    </logger>
 
     <logger name="org.nexbook.tools.fixordergenerator.fix" level="debug"/>
 
     <root level="debug">
         <appender-ref ref="FILE_ASYNC"/>
-        <appender-ref ref="STDOUT"/>
+        <!--<appender-ref ref="STDOUT"/>-->
     </root>
 </configuration>
