@@ -10,11 +10,13 @@ import quickfix.{Message, Session}
 class FixMessageSenderActor extends Actor {
 
   val logger = LoggerFactory.getLogger(classOf[FixMessageSenderActor])
+  val messagesLogger = LoggerFactory.getLogger("MESSAGES")
 
   override def receive = {
-    case p: FixMessageToSend =>
+    case p: FixMessageWithSession =>
         logger.debug("Sending message: {}", p.message)
-        Session.sendToTarget(p.message, p.session.getSessionID)
+      p.session.send(p.message)
+      messagesLogger.debug(p.message.toString)
     case m: Message =>
       logger.debug("Sending message: {}", m)
       Session.sendToTarget(m)

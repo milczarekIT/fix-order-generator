@@ -1,8 +1,8 @@
 package org.nexbook.tools.fixordergenerator.generator
 
-import akka.actor.{ActorRef, ActorSystem}
+import akka.actor.{Actor, ActorRef, ActorSystem}
 import com.typesafe.config.Config
-import org.nexbook.tools.fixordergenerator.fix.FixMessageToSend
+import org.nexbook.tools.fixordergenerator.fix.FixMessageWithSession
 import org.nexbook.tools.fixordergenerator.utils.RandomUtils
 import org.slf4j.LoggerFactory
 import quickfix.Session
@@ -13,7 +13,7 @@ import scala.concurrent.duration._
 /**
  * Created by milczu on 08.12.15.
  */
-class OrderCancelExecutor(system: ActorSystem, fixMessageSenderActor: ActorRef, config: Config) extends PostOrderGenerator {
+class OrderCancelExecutor(system: ActorSystem, fixMessageSenderActor: ActorRef, config: Config) extends Actor {
 
   val logger = LoggerFactory.getLogger(classOf[OrderCancelExecutor])
 
@@ -23,7 +23,10 @@ class OrderCancelExecutor(system: ActorSystem, fixMessageSenderActor: ActorRef, 
 
   logger.info("OrderCancelExecutor initialized. cancelOrderRate: {}, Delay: {}-{}", cancelOrderRate.toString, minDelay.toString, maxDelay.toString)
 
-  override def afterOrderGenerated(order: NewOrderSingle, session: Session): Unit = scheduleOrderCancelIfNeeded(order, session)
+
+  override def receive: Receive = {
+    case p: FixMessageWithSession => scheduleOrderCancelIfNeeded(p.message.asInstanceOf[NewOrderSingle], p.session)
+  }
 
   def scheduleOrderCancelIfNeeded(newOrderSingle: NewOrderSingle, session: Session): Unit = {
     def shouldBeCancelled = RandomUtils.random(0, 100) <= cancelOrderRate
@@ -34,7 +37,7 @@ class OrderCancelExecutor(system: ActorSystem, fixMessageSenderActor: ActorRef, 
       logger.info("Order with clOrdId: {} will be cancelled with clOrdId: {} in {} secs", orderCancel.getOrigClOrdID.getValue, orderCancel.getClOrdID.getValue, delay.toString)
 
       import system.dispatcher
-      system.scheduler.scheduleOnce(delay millis, fixMessageSenderActor, new FixMessageToSend(orderCancel, session))
+      system.scheduler.scheduleOnce(delay millis, fixMessageSenderActor, FixMessageWithSession(orderCancel, session))
     }
   }
 

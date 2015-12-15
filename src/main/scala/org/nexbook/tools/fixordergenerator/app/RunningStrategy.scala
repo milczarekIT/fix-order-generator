@@ -2,8 +2,8 @@ package org.nexbook.tools.fixordergenerator.app
 
 import akka.actor.{ActorSystem, Props}
 import org.nexbook.tools.fixordergenerator.AppConfig
-import org.nexbook.tools.fixordergenerator.fix.{FixMessageSenderActor, FixMessageToSend}
-import org.nexbook.tools.fixordergenerator.generator.{OrderCancelExecutor, OrderGenerator, PostOrderGenerator, SymbolGenerator}
+import org.nexbook.tools.fixordergenerator.fix.{FixMessageSenderActor, FixMessageWithSession}
+import org.nexbook.tools.fixordergenerator.generator.{OrderCancelExecutor, OrderGenerator, SymbolGenerator}
 import org.nexbook.tools.fixordergenerator.utils.RandomUtils
 import org.slf4j.{Logger, LoggerFactory}
 import quickfix.Session
@@ -24,8 +24,12 @@ trait RunningStrategy {
 
   def loggedSessions = fixSessions.filter(_.isLoggedOn)
 
+  def areAllSessionsLogged = loggedSessions.size == fixSessions.size
+
+  def appConfig: AppConfig
+
   def waitForLogon() = {
-    while (loggedSessions.size < fixSessions.size) {
+    while (!areAllSessionsLogged) {
       logger.trace("Waiting for logging to FIX Session")
       Thread.sleep(1000)
     }
@@ -33,12 +37,34 @@ trait RunningStrategy {
   }
 }
 
-class NewOrderGeneratingStrategy(val fixSessions: List[Session], appConfig: AppConfig) extends RunningStrategy {
+trait OrderGeneratingRunningStrategy extends RunningStrategy {
+  def appConfig: AppConfig
 
-  val logger = LoggerFactory.getLogger(classOf[NewOrderGeneratingStrategy])
-  val orderCancelExecutor = new OrderCancelExecutor(actorSystem, fixMessageSenderActor, appConfig.generatorConfig.getConfig("cancelOrder"))
-  val postOrderGenerators: List[PostOrderGenerator] = List(orderCancelExecutor)
   val orderGenerator = new OrderGenerator(new SymbolGenerator(appConfig.supportedSymbols))
+  val orderCancelExecutor = actorSystem.actorOf(Props(new OrderCancelExecutor(actorSystem, fixMessageSenderActor, appConfig.generatorConfig.getConfig("cancelOrder"))), "orderCancelExecutor")
+  //val postOrderGenerators: List[PostOrderGenerator] = List(orderCancelExecutor)
+  var orderCounter: Int = 0
+
+  val isLimitRestriction = appConfig.generatorConfig.getBoolean("limit.limited")
+  val orderLimit = appConfig.generatorConfig.getInt("limit.maxOrderCount")
+
+  def canBeGeneratedNextOrder = !isLimitRestriction || orderCounter < orderLimit
+
+  def generateAndPublishOrder(session: Session) = {
+    val order = orderGenerator.generate()
+    orderCounter = orderCounter + 1
+    val msg = FixMessageWithSession(order, session)
+    fixMessageSenderActor ! msg
+    //postOrderGenerators.foreach(_.afterOrderGenerated(order, session))
+    orderCancelExecutor ! msg
+  }
+
+  def waitForSendMessagesOverFix = Thread.sleep(1200000)
+}
+
+class NewOrderGeneratingThreadBasedStrategy(val fixSessions: List[Session], val appConfig: AppConfig) extends OrderGeneratingRunningStrategy {
+
+  val logger = LoggerFactory.getLogger(classOf[NewOrderGeneratingThreadBasedStrategy])
   val threadsPerFixSession = 5
 
   val minDelay = appConfig.generatorConfig.getInt("minDelayInMillis")
@@ -54,7 +80,7 @@ class NewOrderGeneratingStrategy(val fixSessions: List[Session], appConfig: AppC
     for (session <- loggedSessions) {
       for (no <- 1 to threadsPerFixSession) {
         val threadName = session.getSessionID.getSenderCompID + "_" + no
-        val thread = new Thread(new AsyncOrderGeneratorSender(session, postOrderGenerators), threadName)
+        val thread = new Thread(new AsyncOrderGeneratorSender(session), threadName)
         thread.start()
         threads = thread :: threads
       }
@@ -63,16 +89,20 @@ class NewOrderGeneratingStrategy(val fixSessions: List[Session], appConfig: AppC
     while (!allThreadsDead) {
       Thread.sleep(10000)
     }
-    startWork()
+    if (canBeGeneratedNextOrder) {
+      startWork()
+    } else {
+      logger.debug("Waiting for send messages over FIX")
+      waitForSendMessagesOverFix
+      logger.debug("Waiting for send messages over FIX - FINISHED")
+    }
   }
 
-  class AsyncOrderGeneratorSender(session: Session, postOrderGenerators: List[PostOrderGenerator]) extends Runnable {
+  class AsyncOrderGeneratorSender(session: Session) extends Runnable {
 
     override def run(): Unit = {
-      while (true) {
-        val order = orderGenerator.generate()
-        fixMessageSenderActor ! FixMessageToSend(order, session)
-        postOrderGenerators.foreach(_.afterOrderGenerated(order, session))
+      while (canBeGeneratedNextOrder) {
+        generateAndPublishOrder(session)
         if (delay) {
           Thread.sleep(RandomUtils.random(minDelay, maxDelay))
         }
@@ -80,4 +110,27 @@ class NewOrderGeneratingStrategy(val fixSessions: List[Session], appConfig: AppC
     }
   }
 
+}
+
+class NewOrderGeneratingSingleThreadStrategy(val fixSessions: List[Session], val appConfig: AppConfig) extends OrderGeneratingRunningStrategy {
+  override val logger: Logger = LoggerFactory.getLogger(classOf[NewOrderGeneratingSingleThreadStrategy])
+
+  override def startWork(): Unit = {
+    waitForLogon()
+
+    while (canBeGeneratedNextOrder) {
+      for (session <- loggedSessions) {
+        if (canBeGeneratedNextOrder) {
+          generateAndPublishOrder(session)
+        }
+      }
+    }
+    if (canBeGeneratedNextOrder) {
+      startWork()
+    } else {
+      logger.debug("Waiting for send messages over FIX")
+      waitForSendMessagesOverFix
+      logger.debug("Waiting for send messages over FIX - FINISHED")
+    }
+  }
 }

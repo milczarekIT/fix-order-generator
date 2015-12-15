@@ -1,7 +1,7 @@
 package org.nexbook.tools.fixordergenerator
 
 import com.typesafe.config.ConfigFactory
-import org.nexbook.tools.fixordergenerator.app.{NewOrderGeneratingStrategy, RunningStrategy}
+import org.nexbook.tools.fixordergenerator.app.{NewOrderGeneratingSingleThreadStrategy, RunningStrategy}
 import org.nexbook.tools.fixordergenerator.fix.FixApplication
 import org.nexbook.tools.fixordergenerator.generator._
 import org.nexbook.tools.fixordergenerator.repository.{PriceRepository, PricesLoader}
@@ -27,10 +27,10 @@ object App {
     def initFixInitiator(): SocketInitiator = {
       val fixOrderHandlerSettings = new SessionSettings(appConfig.fixConfig.getString("config.path"))
       val application = new FixApplication
-      val fileStoreFactory = new FileStoreFactory(fixOrderHandlerSettings)
+      val storeFactory = new MemoryStoreFactory
       val messageFactory = new DefaultMessageFactory
       val fileLogFactory = new FileLogFactory(fixOrderHandlerSettings)
-      val socketInitiator = new SocketInitiator(application, fileStoreFactory, fixOrderHandlerSettings, fileLogFactory, messageFactory)
+      val socketInitiator = new SocketInitiator(application, storeFactory, fixOrderHandlerSettings, fileLogFactory, messageFactory)
       socketInitiator.start()
       socketInitiator
     }
@@ -38,7 +38,7 @@ object App {
     val fixInitiator = initFixInitiator()
     val fixSessions = fixInitiator.getManagedSessions.asScala.toList
 
-    def runningStrategy: RunningStrategy = new NewOrderGeneratingStrategy(fixSessions, appConfig)
+    def runningStrategy: RunningStrategy = new NewOrderGeneratingSingleThreadStrategy(fixSessions, appConfig)
 
     runningStrategy.startWork()
 

@@ -2,6 +2,8 @@ name := "fix-order-generator"
 
 version := "1.0"
 
+scalaVersion := "2.11.4"
+
 libraryDependencies ++= Seq(
   "joda-time" % "joda-time" % "2.8",
   "org.apache.mina" % "mina-core" % "1.1.7",
