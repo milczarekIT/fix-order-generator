@@ -1,12 +1,12 @@
-package org.nexbook.tools.fixordergenerator
+package org.nexbook.tools.fixordergenerator.app
 
 import com.typesafe.config.Config
 
 import scala.collection.JavaConverters._
 
 /**
- * Created by milczu on 11.12.15
- */
+  * Created by milczu on 11.12.15
+  */
 class AppConfig(config: Config) {
 
   lazy val supportedSymbols = config.getStringList("symbols").asScala.toList

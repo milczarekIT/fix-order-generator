@@ -7,7 +7,7 @@
     </appender>
 
     <appender name="FILE" class="ch.qos.logback.core.FileAppender">
-        <file>generator.log</file>
+        <file>${config.name}/generator.log</file>
         <append>false</append>
         <encoder>
             <pattern>%d{HH:mm:ss.SSS} [%thread] %-5level %logger{36} - %msg%n</pattern>
@@ -19,7 +19,7 @@
     </appender>
 
     <appender name="MESSAGES" class="ch.qos.logback.core.FileAppender">
-        <file>messages.log</file>
+        <file>${config.name}/messages.log</file>
         <append>false</append>
         <encoder>
             <pattern>%msg%n</pattern>

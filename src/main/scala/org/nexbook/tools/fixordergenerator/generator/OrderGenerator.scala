@@ -11,8 +11,8 @@ import quickfix.fix44.NewOrderSingle
 import scala.util.Random
 
 /**
- * Created by milczu on 15.12.14.
- */
+  * Created by milczu on 15.12.14.
+  */
 class OrderGenerator(symbolGenerator: SymbolGenerator) {
 
   val availableSides: List[Side] = List(new Side(Side.BUY), new Side(Side.SELL))
@@ -21,12 +21,12 @@ class OrderGenerator(symbolGenerator: SymbolGenerator) {
   def generate(count: Int): List[NewOrderSingle] = Seq.fill(count)(generate()).toList
 
   def generate(): NewOrderSingle = {
-    val order = new NewOrderSingle(clOrdId, side, currentTransactTime, ordType)
-    order.set(new OrderQty(orderQty))
-    order.set(new Symbol(symbolGenerator.randomSymbol))
-    order.set(account)
-    ordTypeDependent(order)
-    order
+	val order = new NewOrderSingle(clOrdId, side, currentTransactTime, ordType)
+	order.set(new OrderQty(orderQty))
+	order.set(new Symbol(symbolGenerator.randomSymbol))
+	order.set(account)
+	ordTypeDependent(order)
+	order
   }
 
   private def clOrdId = new ClOrdID(UUID.randomUUID().toString)
@@ -42,10 +42,10 @@ class OrderGenerator(symbolGenerator: SymbolGenerator) {
   private def account = new Account("%05d".format(Random.nextInt(500) + 1))
 
   private def ordTypeDependent(order: NewOrderSingle) = order.getOrdType.getValue match {
-    case OrdType.LIMIT =>
-      order.set(new Price(PriceGenerator.generatePrice(order.getSide.getValue, order.getSymbol.getValue)))
-      order
-    case _ => order
+	case OrdType.LIMIT =>
+	  order.set(new Price(PriceGenerator.generatePrice(order.getSide.getValue, order.getSymbol.getValue)))
+	  order
+	case _ => order
   }
 
 }
