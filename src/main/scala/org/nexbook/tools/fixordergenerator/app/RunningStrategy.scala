@@ -5,11 +5,15 @@ import java.util.concurrent.atomic.AtomicLong
 import akka.actor.{ActorSystem, Props}
 import akka.routing.RoundRobinRouter
 import com.typesafe.config.Config
+import org.joda.time.{DateTime, DateTimeZone}
 import org.nexbook.tools.fixordergenerator.fix.{FixMessageSenderActor, FixMessageWithSession}
 import org.nexbook.tools.fixordergenerator.generator.{OrderCancelExecutor, OrderGenerator, SymbolGenerator}
-import org.nexbook.tools.fixordergenerator.utils.RandomUtils
 import org.slf4j.{Logger, LoggerFactory}
-import quickfix.Session
+import quickfix.field.{MsgType, TransactTime}
+import quickfix.fix44.{NewOrderSingle, OrderCancelRequest}
+import quickfix.{DataDictionary, Message, Session}
+
+import scala.io.Source
 
 /**
   * Created by milczu on 13.12.15
@@ -25,10 +29,6 @@ trait RunningStrategy {
 
   def fixSessions: List[Session]
 
-  def loggedSessions = fixSessions.filter(_.isLoggedOn)
-
-  def areAllSessionsLogged = loggedSessions.size == fixSessions.size
-
   def appConfig: AppConfig
 
   def waitForLogon() = {
@@ -38,6 +38,12 @@ trait RunningStrategy {
 	}
 	logger.info(s"Logged to fix sessions: $loggedSessions")
   }
+
+  def areAllSessionsLogged = loggedSessions.size == fixSessions.size
+
+  def loggedSessions = fixSessions.filter(_.isLoggedOn)
+
+  def waitForSendMessagesOverFix() = Thread.sleep(1200000)
 }
 
 trait OrderCountingGenerator {
@@ -65,59 +71,6 @@ trait OrderGeneratingRunningStrategy extends RunningStrategy with OrderCountingG
 	fixMessageSenderActor ! msg
 	orderCancelExecutor ! msg
   }
-
-  def waitForSendMessagesOverFix = Thread.sleep(1200000)
-}
-
-class NewOrderGeneratingThreadBasedStrategy(val fixSessions: List[Session], val appConfig: AppConfig) extends OrderGeneratingRunningStrategy {
-
-  val logger = LoggerFactory.getLogger(classOf[NewOrderGeneratingThreadBasedStrategy])
-  val threadsPerFixSession = 5
-
-  val generatorConfig = appConfig.generatorConfig
-  val minDelay = generatorConfig.getInt("minDelayInMillis")
-  val maxDelay = generatorConfig.getInt("maxDelayInMillis")
-  val delay = generatorConfig.getBoolean("delay")
-
-  def startWork(): Unit = {
-	waitForLogon()
-	var threads: List[Thread] = List()
-
-	def allThreadsDead = !threads.exists(_.isAlive)
-
-	for (session <- loggedSessions) {
-	  for (no <- 1 to threadsPerFixSession) {
-		val threadName = session.getSessionID.getSenderCompID + "_" + no
-		val thread = new Thread(new AsyncOrderGeneratorSender(session), threadName)
-		thread.start()
-		threads = thread :: threads
-	  }
-	}
-
-	while (!allThreadsDead) {
-	  Thread.sleep(10000)
-	}
-	if (canBeGeneratedNextOrder) {
-	  startWork()
-	} else {
-	  logger.debug("Waiting for send messages over FIX")
-	  waitForSendMessagesOverFix
-	  logger.debug("Waiting for send messages over FIX - FINISHED")
-	}
-  }
-
-  class AsyncOrderGeneratorSender(session: Session) extends Runnable {
-
-	override def run(): Unit = {
-	  while (canBeGeneratedNextOrder) {
-		generateAndPublishOrder(session)
-		if (delay) {
-		  Thread.sleep(RandomUtils.random(minDelay, maxDelay))
-		}
-	  }
-	}
-  }
-
 }
 
 class NewOrderGeneratingSingleThreadStrategy(val fixSessions: List[Session], val appConfig: AppConfig) extends OrderGeneratingRunningStrategy {
@@ -139,8 +92,56 @@ class NewOrderGeneratingSingleThreadStrategy(val fixSessions: List[Session], val
 	  startWork()
 	} else {
 	  logger.debug("Waiting for send messages over FIX")
-	  waitForSendMessagesOverFix
+	  waitForSendMessagesOverFix()
 	  logger.debug("Waiting for send messages over FIX - FINISHED")
 	}
+  }
+}
+
+class FileBasedPublisherStrategy(val fixSessions: List[Session], val appConfig: AppConfig) extends RunningStrategy {
+
+  override val logger: Logger = LoggerFactory.getLogger(classOf[FileBasedPublisherStrategy])
+
+  val fileName = appConfig.fileBasedStrategyConfig.getString("msgFileName")
+  val dataDictionary = new DataDictionary("config/FIX44.xml")
+
+  override def startWork(): Unit = {
+	def toFixMessage(line: String): Message = new Message(line, dataDictionary, false)
+
+	def fixMsgToSpecializedMsg(msg: Message): Message = {
+	  msg.getHeader.getField(new MsgType()).getValue match {
+		case NewOrderSingle.MSGTYPE =>
+		  val newOrderSingle = new NewOrderSingle
+		  newOrderSingle.fromString(msg.toString, dataDictionary, false)
+		  newOrderSingle
+		case OrderCancelRequest.MSGTYPE =>
+		  val orderCancelRequest = new OrderCancelRequest
+		  orderCancelRequest.fromString(msg.toString, dataDictionary, false)
+		  orderCancelRequest
+		case _ => msg
+	  }
+	}
+
+	def withUpdatedFields(msg: Message): Message = msg.getHeader.getField(new MsgType()).getValue match {
+	  case NewOrderSingle.MSGTYPE =>
+		val newOrderSingle: NewOrderSingle = msg.asInstanceOf[NewOrderSingle]
+		newOrderSingle.set(new TransactTime(DateTime.now(DateTimeZone.UTC).toDate))
+		newOrderSingle
+	  case OrderCancelRequest.MSGTYPE =>
+		val orderCancelRequest: OrderCancelRequest = msg.asInstanceOf[OrderCancelRequest]
+		orderCancelRequest.set(new TransactTime(DateTime.now(DateTimeZone.UTC).toDate))
+		orderCancelRequest
+	}
+
+	waitForLogon()
+	logger.info("All sessions logged. Reading FIX msgs from file")
+	val lines: List[String] = Source.fromFile(fileName).getLines.toList
+	logger.info(s"All sessions logged. Readed msgs: ${lines.size}")
+
+	val fixMsgs: List[Message] = lines.map(toFixMessage).map(fixMsgToSpecializedMsg).map(withUpdatedFields)
+	for (fixMsg <- fixMsgs) {
+	  fixMessageSenderActor ! fixMsg
+	}
+	waitForSendMessagesOverFix()
   }
 }
