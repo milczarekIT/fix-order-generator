@@ -5,7 +5,7 @@ import java.util.concurrent.atomic.AtomicLong
 import akka.actor.{Actor, ActorRef, ActorSystem}
 import com.typesafe.config.Config
 import org.nexbook.tools.fixordergenerator.app.OrderCountingGenerator
-import org.nexbook.tools.fixordergenerator.fix.FixMessageWithSession
+import org.nexbook.tools.fixordergenerator.fix.FixMessageSender.FixMessageWithSession
 import org.nexbook.tools.fixordergenerator.utils.RandomUtils
 import org.slf4j.LoggerFactory
 import quickfix.Session
@@ -31,7 +31,7 @@ class OrderCancelExecutor(system: ActorSystem, fixMessageSenderActor: ActorRef, 
 	case p: FixMessageWithSession => scheduleOrderCancelIfNeeded(p.message.asInstanceOf[NewOrderSingle], p.session)
   }
 
-  def scheduleOrderCancelIfNeeded(newOrderSingle: NewOrderSingle, session: Session): Unit = {
+  def scheduleOrderCancelIfNeeded(newOrderSingle: NewOrderSingle, session: Session) = {
 	def shouldBeCancelled = RandomUtils.random(0, 100) <= cancelOrderRate
 
 	if (shouldBeCancelled && canBeGeneratedNextOrder) {

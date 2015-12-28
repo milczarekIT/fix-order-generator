@@ -6,12 +6,13 @@ import akka.actor.{ActorSystem, Props}
 import akka.routing.RoundRobinRouter
 import com.typesafe.config.Config
 import org.joda.time.{DateTime, DateTimeZone}
-import org.nexbook.tools.fixordergenerator.fix.{FixMessageSenderActor, FixMessageWithSession}
+import org.nexbook.tools.fixordergenerator.fix.FixMessageSender
+import org.nexbook.tools.fixordergenerator.fix.FixMessageSender.FixMessageWithSession
 import org.nexbook.tools.fixordergenerator.generator.{OrderCancelExecutor, OrderGenerator, SymbolGenerator}
 import org.slf4j.{Logger, LoggerFactory}
 import quickfix.field.{MsgType, TransactTime}
 import quickfix.fix44.{NewOrderSingle, OrderCancelRequest}
-import quickfix.{DataDictionary, Message, Session}
+import quickfix.{DataDictionary, Message, Session, SessionID}
 
 import scala.io.Source
 
@@ -21,7 +22,7 @@ import scala.io.Source
 trait RunningStrategy {
 
   val actorSystem = ActorSystem("FixMessageSenderSystem")
-  val fixMessageSenderActor = actorSystem.actorOf(Props[FixMessageSenderActor].withRouter(RoundRobinRouter(8)), name = "listener")
+  val fixMessageSenderActor = actorSystem.actorOf(Props[FixMessageSender].withRouter(RoundRobinRouter(4)))
 
   def startWork(): Unit
 
@@ -43,7 +44,7 @@ trait RunningStrategy {
 
   def loggedSessions = fixSessions.filter(_.isLoggedOn)
 
-  def waitForSendMessagesOverFix() = Thread.sleep(1200000)
+  def waitForSendMessagesOverFix() = Thread.sleep(12000000)
 }
 
 trait OrderCountingGenerator {
@@ -78,7 +79,7 @@ class NewOrderGeneratingSingleThreadStrategy(val fixSessions: List[Session], val
 
   def generatorConfig = appConfig.generatorConfig
 
-  override def startWork(): Unit = {
+  override def startWork() = {
 	waitForLogon()
 
 	while (canBeGeneratedNextOrder) {
@@ -105,7 +106,7 @@ class FileBasedPublisherStrategy(val fixSessions: List[Session], val appConfig: 
   val fileName = appConfig.fileBasedStrategyConfig.getString("msgFileName")
   val dataDictionary = new DataDictionary("config/FIX44.xml")
 
-  override def startWork(): Unit = {
+  override def startWork() = {
 	def toFixMessage(line: String): Message = new Message(line, dataDictionary, false)
 
 	def fixMsgToSpecializedMsg(msg: Message): Message = {
@@ -133,15 +134,29 @@ class FileBasedPublisherStrategy(val fixSessions: List[Session], val appConfig: 
 		orderCancelRequest
 	}
 
+	def resolveSession(message: Message): Session = {
+	  def sessionID: SessionID = {
+		val header = message.getHeader
+		val beginString = header.getString(8)
+		val senderCompID = header.getString(49)
+		val targetCompID = header.getString(56)
+		val qualifier = ""
+		new SessionID(beginString, senderCompID, targetCompID, qualifier)
+	  }
+	  Session.lookupSession(sessionID)
+	}
+
 	waitForLogon()
 	logger.info("All sessions logged. Reading FIX msgs from file")
 	val lines: List[String] = Source.fromFile(fileName).getLines.toList
 	logger.info(s"All sessions logged. Readed msgs: ${lines.size}")
 
-	val fixMsgs: List[Message] = lines.map(toFixMessage).map(fixMsgToSpecializedMsg).map(withUpdatedFields)
+	val fixMsgs: List[FixMessageWithSession] = lines.map(toFixMessage).map(fixMsgToSpecializedMsg).map(withUpdatedFields).map(msg => FixMessageWithSession(msg, resolveSession(msg)))
 	for (fixMsg <- fixMsgs) {
 	  fixMessageSenderActor ! fixMsg
 	}
+
 	waitForSendMessagesOverFix()
+	actorSystem.shutdown()
   }
 }

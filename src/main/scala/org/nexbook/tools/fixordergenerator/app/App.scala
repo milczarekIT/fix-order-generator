@@ -39,9 +39,11 @@ object App {
 	val fixInitiator = initFixInitiator()
 	val fixSessions = fixInitiator.getManagedSessions.asScala.toList
 
-	def runningStrategy: RunningStrategy = new NewOrderGeneratingSingleThreadStrategy(fixSessions, appConfig)
+	def runningStrategy: RunningStrategy = new FileBasedPublisherStrategy(fixSessions, appConfig)
 
 	runningStrategy.startWork()
+
+	fixInitiator.stop()
   }
 
   def resolveConfigName: String = {

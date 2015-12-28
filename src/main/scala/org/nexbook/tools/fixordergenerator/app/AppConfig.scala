@@ -14,4 +14,6 @@ class AppConfig(config: Config) {
   lazy val fixConfig = config.getConfig("fix")
 
   lazy val generatorConfig = config.getConfig("generator")
+
+  lazy val fileBasedStrategyConfig = config.getConfig("strategy.file")
 }

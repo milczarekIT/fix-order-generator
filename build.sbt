@@ -13,7 +13,10 @@ libraryDependencies ++= Seq(
   "net.liftweb" % "lift-json_2.11" % "2.6.2",
   "com.typesafe" % "config" % "1.2.1",
   "com.typesafe.akka" % "akka-actor_2.11" % "2.3.12",
-  "org.scalatest" % "scalatest_2.11" % "2.2.5"
+  "org.scalatest" % "scalatest_2.11" % "2.2.5",
+  "quickfixj" % "quickfixj-all" % "1.5.3"
 )
 
 resolvers += Resolver.mavenLocal
+
+resolvers += "marketcetera" at "http://repo.marketcetera.org/maven"
