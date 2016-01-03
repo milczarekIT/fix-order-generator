@@ -9,8 +9,7 @@ import org.scalatest.{FlatSpec, Matchers}
 class OrderGeneratorTest extends FlatSpec with Matchers {
 
   "OrderGenerator" should "generate orders fast!" in {
-	PriceGenerator.updatePrices(PriceRepository.defaultPrices)
-	val orderGenerator = new OrderGenerator(new SymbolGenerator(List("GBP/USD", "EUR/USD", "USD/JPY")))
+	val orderGenerator = new OrderGenerator(new SymbolGenerator(List("GBP/USD", "EUR/USD", "USD/JPY")), new PriceGenerator(new PriceRepository(Map.empty)))
 
 	val n = 100000
 	val repeats = 4

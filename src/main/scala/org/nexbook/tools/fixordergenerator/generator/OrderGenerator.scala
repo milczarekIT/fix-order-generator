@@ -13,7 +13,7 @@ import scala.util.Random
 /**
   * Created by milczu on 15.12.14.
   */
-class OrderGenerator(symbolGenerator: SymbolGenerator) {
+class OrderGenerator(symbolGenerator: SymbolGenerator, priceGenerator: PriceGenerator) {
 
   val availableSides: List[Side] = List(new Side(Side.BUY), new Side(Side.SELL))
   val availableOrderTypes: List[(Int, OrdType)] = List(26 -> new OrdType(OrdType.MARKET), 107 -> new OrdType(OrdType.LIMIT))
@@ -43,7 +43,7 @@ class OrderGenerator(symbolGenerator: SymbolGenerator) {
 
   private def ordTypeDependent(order: NewOrderSingle) = order.getOrdType.getValue match {
 	case OrdType.LIMIT =>
-	  order.set(new Price(PriceGenerator.generatePrice(order.getSide.getValue, order.getSymbol.getValue)))
+	  order.set(new Price(priceGenerator.generatePrice(order.getSide.getValue, order.getSymbol.getValue)))
 	  order
 	case _ => order
   }

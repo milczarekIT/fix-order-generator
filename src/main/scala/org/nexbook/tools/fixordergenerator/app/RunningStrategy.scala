@@ -3,12 +3,12 @@ package org.nexbook.tools.fixordergenerator.app
 import java.util.concurrent.atomic.AtomicLong
 
 import akka.actor.{ActorSystem, Props}
-import akka.routing.RoundRobinRouter
 import com.typesafe.config.Config
 import org.joda.time.{DateTime, DateTimeZone}
-import org.nexbook.tools.fixordergenerator.fix.FixMessageSender
 import org.nexbook.tools.fixordergenerator.fix.FixMessageSender.FixMessageWithSession
-import org.nexbook.tools.fixordergenerator.generator.{OrderCancelExecutor, OrderGenerator, SymbolGenerator}
+import org.nexbook.tools.fixordergenerator.fix.{FixConnector, FixMessageRouter}
+import org.nexbook.tools.fixordergenerator.generator.{OrderCancelExecutor, OrderGenerator, PriceGenerator, SymbolGenerator}
+import org.nexbook.tools.fixordergenerator.repository.{PriceRepository, PricesLoader}
 import org.slf4j.{Logger, LoggerFactory}
 import quickfix.field.{MsgType, TransactTime}
 import quickfix.fix44.{NewOrderSingle, OrderCancelRequest}
@@ -22,7 +22,7 @@ import scala.io.Source
 trait RunningStrategy {
 
   val actorSystem = ActorSystem("FixMessageSenderSystem")
-  val fixMessageSenderActor = actorSystem.actorOf(Props[FixMessageSender].withRouter(RoundRobinRouter(4)))
+  val fixMessageSenderActor = actorSystem.actorOf(Props[FixMessageRouter](new FixMessageRouter(fixSessions) with FixConnector))
 
   def startWork(): Unit
 
@@ -31,20 +31,6 @@ trait RunningStrategy {
   def fixSessions: List[Session]
 
   def appConfig: AppConfig
-
-  def waitForLogon() = {
-	while (!areAllSessionsLogged) {
-	  logger.trace("Waiting for logging to FIX Session")
-	  Thread.sleep(1000)
-	}
-	logger.info(s"Logged to fix sessions: $loggedSessions")
-  }
-
-  def areAllSessionsLogged = loggedSessions.size == fixSessions.size
-
-  def loggedSessions = fixSessions.filter(_.isLoggedOn)
-
-  def waitForSendMessagesOverFix() = Thread.sleep(12000000)
 }
 
 trait OrderCountingGenerator {
@@ -59,7 +45,10 @@ trait OrderCountingGenerator {
 }
 
 trait OrderGeneratingRunningStrategy extends RunningStrategy with OrderCountingGenerator {
-  val orderGenerator = new OrderGenerator(new SymbolGenerator(appConfig.supportedSymbols))
+
+  val priceGenerator = new PriceGenerator(new PriceRepository(new PricesLoader(appConfig.supportedSymbols).loadCurrentPrices))
+
+  val orderGenerator = new OrderGenerator(new SymbolGenerator(appConfig.supportedSymbols), priceGenerator)
   val orderCounter: AtomicLong = new AtomicLong
   val orderCancelExecutor = actorSystem.actorOf(Props(new OrderCancelExecutor(actorSystem, fixMessageSenderActor, appConfig.generatorConfig, orderCounter)), "orderCancelExecutor")
 
@@ -74,8 +63,10 @@ trait OrderGeneratingRunningStrategy extends RunningStrategy with OrderCountingG
   }
 }
 
-class NewOrderGeneratingSingleThreadStrategy(val fixSessions: List[Session], val appConfig: AppConfig) extends OrderGeneratingRunningStrategy {
-  override val logger: Logger = LoggerFactory.getLogger(classOf[NewOrderGeneratingSingleThreadStrategy])
+class AkkaNewOrderGeneratingStrategy(val fixSessions: List[Session], val appConfig: AppConfig) extends OrderGeneratingRunningStrategy {
+  this: FixConnector =>
+
+  override val logger: Logger = LoggerFactory.getLogger(classOf[AkkaNewOrderGeneratingStrategy])
 
   def generatorConfig = appConfig.generatorConfig
 
@@ -100,6 +91,7 @@ class NewOrderGeneratingSingleThreadStrategy(val fixSessions: List[Session], val
 }
 
 class FileBasedPublisherStrategy(val fixSessions: List[Session], val appConfig: AppConfig) extends RunningStrategy {
+  this: FixConnector =>
 
   override val logger: Logger = LoggerFactory.getLogger(classOf[FileBasedPublisherStrategy])
 

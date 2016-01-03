@@ -16,7 +16,7 @@ import scala.concurrent.duration._
 /**
   * Created by milczu on 08.12.15.
   */
-class OrderCancelExecutor(system: ActorSystem, fixMessageSenderActor: ActorRef, val generatorConfig: Config, val orderCounter: AtomicLong) extends Actor with OrderCountingGenerator {
+class OrderCancelExecutor(system: ActorSystem, fixMessageSender: ActorRef, val generatorConfig: Config, val orderCounter: AtomicLong) extends Actor with OrderCountingGenerator {
 
   val logger = LoggerFactory.getLogger(classOf[OrderCancelExecutor])
   val cancelConfig = generatorConfig.getConfig("cancelOrder")
@@ -41,7 +41,7 @@ class OrderCancelExecutor(system: ActorSystem, fixMessageSenderActor: ActorRef, 
 	  logger.info("Order with clOrdId: {} will be cancelled with clOrdId: {} in {} secs", orderCancel.getOrigClOrdID.getValue, orderCancel.getClOrdID.getValue, delay.toString)
 
 	  import system.dispatcher
-	  system.scheduler.scheduleOnce(delay millis, fixMessageSenderActor, FixMessageWithSession(orderCancel, session))
+	  system.scheduler.scheduleOnce(delay millis, fixMessageSender, FixMessageWithSession(orderCancel, session))
 	}
   }
 

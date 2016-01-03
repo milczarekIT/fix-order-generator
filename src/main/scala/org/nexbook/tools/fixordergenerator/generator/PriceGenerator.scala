@@ -9,9 +9,9 @@ import scala.util.Random
 /**
   * Created by milczu on 10.12.15
   */
-object PriceGenerator {
+class PriceGenerator(repository: PriceRepository) {
 
-  var allowedPrices: Map[String, (List[Double], List[Double])] = generateAllowedPrices(PriceRepository.prices)
+  var allowedPrices: Map[String, (List[Double], List[Double])] = generateAllowedPrices(repository.findAll)
 
   def updatePrices(prices: Map[String, (Double, Double)]) = allowedPrices = generateAllowedPrices(prices)
 

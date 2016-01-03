@@ -1,9 +1,8 @@
 package org.nexbook.tools.fixordergenerator.app
 
 import com.typesafe.config.ConfigFactory
-import org.nexbook.tools.fixordergenerator.fix.FixApplication
-import org.nexbook.tools.fixordergenerator.generator._
-import org.nexbook.tools.fixordergenerator.repository.{PriceRepository, PricesLoader}
+import org.nexbook.tools.fixordergenerator.fix.{FixApplication, FixConnector}
+import org.nexbook.tools.fixordergenerator.repository.PricesLoader
 import org.slf4j.LoggerFactory
 import quickfix._
 
@@ -22,28 +21,35 @@ object App {
 
 	val prices = new PricesLoader(appConfig.supportedSymbols).loadCurrentPrices
 	logger.info(s"Loaded prices: $prices")
-	PriceRepository.updatePrices(prices)
-	PriceGenerator.updatePrices(prices)
 
-	def initFixInitiator(): SocketInitiator = {
-	  val fixOrderHandlerSettings = new SessionSettings(appConfig.fixConfig.getString("config.path"))
-	  val application = new FixApplication
-	  val storeFactory = new MemoryStoreFactory
-	  val messageFactory = new DefaultMessageFactory
-	  val fileLogFactory = new FileLogFactory(fixOrderHandlerSettings)
-	  val socketInitiator = new SocketInitiator(application, storeFactory, fixOrderHandlerSettings, fileLogFactory, messageFactory)
-	  socketInitiator.start()
-	  socketInitiator
+
+	class FixRunner extends FixConnector {
+	  val logger = LoggerFactory.getLogger(classOf[FixRunner])
+
+	  val fixInitiator: SocketInitiator = {
+		val fixOrderHandlerSettings = new SessionSettings(appConfig.fixConfig.getString("config.path"))
+		val application = new FixApplication
+		val storeFactory = new MemoryStoreFactory
+		val messageFactory = new DefaultMessageFactory
+		val fileLogFactory = new FileLogFactory(fixOrderHandlerSettings)
+		val socketInitiator = new SocketInitiator(application, storeFactory, fixOrderHandlerSettings, fileLogFactory, messageFactory)
+		socketInitiator.start()
+		socketInitiator
+	  }
+
+	  val fixSessions = fixInitiator.getManagedSessions.asScala.toList
+
+	  def stop() = fixInitiator.stop()
 	}
 
-	val fixInitiator = initFixInitiator()
-	val fixSessions = fixInitiator.getManagedSessions.asScala.toList
+	val fixRunner = new FixRunner
+	fixRunner.waitForLogon()
 
-	def runningStrategy: RunningStrategy = new FileBasedPublisherStrategy(fixSessions, appConfig)
+	def runningStrategy: RunningStrategy = new FileBasedPublisherStrategy(fixRunner.fixSessions, appConfig) with FixConnector
 
 	runningStrategy.startWork()
 
-	fixInitiator.stop()
+	fixRunner.stop()
   }
 
   def resolveConfigName: String = {
