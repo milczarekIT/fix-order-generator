@@ -32,7 +32,7 @@ class OrderCancelExecutor(system: ActorSystem, fixMessageSender: ActorRef, val g
   }
 
   def scheduleOrderCancelIfNeeded(newOrderSingle: NewOrderSingle, session: Session) = {
-	def shouldBeCancelled = RandomUtils.random(0, 100) <= cancelOrderRate
+	def shouldBeCancelled = RandomUtils.random(0, 100) < cancelOrderRate
 
 	if (shouldBeCancelled && canBeGeneratedNextOrder) {
 	  val orderCancel = OrderCancelRequestGenerator generate newOrderSingle

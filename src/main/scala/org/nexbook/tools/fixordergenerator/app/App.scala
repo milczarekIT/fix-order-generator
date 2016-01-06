@@ -2,7 +2,6 @@ package org.nexbook.tools.fixordergenerator.app
 
 import com.typesafe.config.ConfigFactory
 import org.nexbook.tools.fixordergenerator.fix.{FixApplication, FixConnector}
-import org.nexbook.tools.fixordergenerator.repository.PricesLoader
 import org.slf4j.LoggerFactory
 import quickfix._
 
@@ -18,10 +17,6 @@ object App {
 	val configPath = s"config/$configName.conf"
 	logger.info(s"Starting with config: $configPath")
 	val appConfig = new AppConfig(ConfigFactory.load(configPath).getConfig("org.nexbook"))
-
-	val prices = new PricesLoader(appConfig.supportedSymbols).loadCurrentPrices
-	logger.info(s"Loaded prices: $prices")
-
 
 	class FixRunner extends FixConnector {
 	  val logger = LoggerFactory.getLogger(classOf[FixRunner])
@@ -45,7 +40,7 @@ object App {
 	val fixRunner = new FixRunner
 	fixRunner.waitForLogon()
 
-	def runningStrategy: RunningStrategy = new FileBasedPublisherStrategy(fixRunner.fixSessions, appConfig) with FixConnector
+	def runningStrategy: RunningStrategy = new AkkaNewOrderGeneratingStrategy(fixRunner.fixSessions, appConfig) with FixConnector
 
 	runningStrategy.startWork()
 
